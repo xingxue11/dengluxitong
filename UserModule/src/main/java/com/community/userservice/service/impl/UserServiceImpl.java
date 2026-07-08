@@ -13,7 +13,9 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.stereotype.Service;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -71,5 +73,12 @@ public class UserServiceImpl implements UserService {
         }
 
         throw new RuntimeException("登录失败");
+    }
+
+    @Override
+    public List<User> findAll() {
+        LambdaQueryWrapper<User> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.orderByDesc(User::getAddtime);
+        return userMapper.selectList(queryWrapper);
     }
 }

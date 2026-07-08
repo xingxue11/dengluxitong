@@ -6,8 +6,8 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.ComponentScan;
 
 @SpringBootApplication
-@ComponentScan(basePackages = {"com.sixcom.userservice", "com.sixcom.webservice"})
-@MapperScan(basePackages = {"com.sixcom.userservice.mapper"})
+@ComponentScan(basePackages = {"com.community.userservice", "com.community.webservice"})
+@MapperScan(basePackages = {"com.community.userservice.mapper"})
 public class SixWebApplication {
 
     public static void main(String[] args) {
