@@ -81,4 +81,33 @@ public class UserServiceImpl implements UserService {
         queryWrapper.orderByDesc(User::getAddtime);
         return userMapper.selectList(queryWrapper);
     }
+
+    @Override
+    public User findById(String id) {
+        return userMapper.selectById(id);
+    }
+
+    @Override
+    public User update(String id, String username, String password, String email) {
+        User existingUser = userMapper.selectById(id);
+        if (existingUser != null) {
+            if (username != null && !username.trim().isEmpty()) {
+                existingUser.setUsername(username.trim());
+            }
+            if (password != null && !password.trim().isEmpty()) {
+                existingUser.setPassword(MD5Util.encrypt(password.trim()));
+            }
+            if (email != null) {
+                existingUser.setEmail(email);
+            }
+            userMapper.updateById(existingUser);
+            return existingUser;
+        }
+        return null;
+    }
+
+    @Override
+    public void delete(String id) {
+        userMapper.deleteById(id);
+    }
 }
