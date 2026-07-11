@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.community.communityservice.entity.Community;
@@ -35,65 +36,131 @@ public class CommunityController {
     }
 
     @GetMapping("/communities")
-    public ResponseEntity<List<Map<String, Object>>> getCommunities() {
-        List<Community> communities = communityService.findAll();
-        List<Map<String, Object>> listMap = new ArrayList<>();
-        
-        for (Community community : communities) {
-            Map<String, Object> map = new HashMap<>();
-            map.put("communityId", community.getCommunityId());
-            map.put("bId", community.getbId());
-            map.put("name", community.getName());
-            map.put("address", community.getAddress());
-            map.put("nearbyLandmarks", community.getNearbyLandmarks());
-            map.put("cityCode", community.getCityCode());
-            map.put("mapX", community.getMapX());
-            map.put("mapY", community.getMapY());
-            map.put("createTime", community.getCreateTime() != null ? community.getCreateTime().toString() : "-");
-            map.put("statusCd", community.getStatusCd());
-            map.put("state", community.getState());
-            map.put("communityArea", community.getCommunityArea());
-            map.put("tel", community.getTel());
-            map.put("payFeeMonth", community.getPayFeeMonth());
-            map.put("feePrice", community.getFeePrice());
-            map.put("qrCode", community.getQrCode());
-            listMap.add(map);
+    public ResponseEntity<Map<String, Object>> getCommunities() {
+        Map<String, Object> response = new HashMap<>();
+        try {
+            List<Community> communities = communityService.findAll();
+            List<Map<String, Object>> listMap = new ArrayList<>();
+            
+            for (Community community : communities) {
+                Map<String, Object> map = new HashMap<>();
+                map.put("communityId", community.getCommunityId());
+                map.put("bId", community.getbId());
+                map.put("name", community.getName());
+                map.put("address", community.getAddress());
+                map.put("nearbyLandmarks", community.getNearbyLandmarks());
+                map.put("cityCode", community.getCityCode());
+                map.put("mapX", community.getMapX());
+                map.put("mapY", community.getMapY());
+                map.put("createTime", community.getCreateTime() != null ? community.getCreateTime().toString() : "-");
+                map.put("statusCd", community.getStatusCd());
+                map.put("state", community.getState());
+                map.put("communityArea", community.getCommunityArea());
+                map.put("tel", community.getTel());
+                map.put("payFeeMonth", community.getPayFeeMonth());
+                map.put("feePrice", community.getFeePrice());
+                map.put("qrCode", community.getQrCode());
+                listMap.add(map);
+            }
+            
+            response.put("success", true);
+            response.put("data", listMap);
+        } catch (Exception e) {
+            logger.error("获取小区列表失败: {}", e.getMessage());
+            response.put("success", false);
+            response.put("message", e.getMessage());
         }
-        return ResponseEntity.ok(listMap);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/communities/search")
+    public ResponseEntity<Map<String, Object>> searchCommunities(@RequestParam String keyword) {
+        Map<String, Object> response = new HashMap<>();
+        try {
+            List<Community> communities = communityService.findAll();
+            List<Map<String, Object>> listMap = new ArrayList<>();
+            
+            for (Community community : communities) {
+                boolean match = false;
+                if (community.getName() != null && community.getName().contains(keyword)) {
+                    match = true;
+                }
+                if (!match && community.getAddress() != null && community.getAddress().contains(keyword)) {
+                    match = true;
+                }
+                
+                if (match) {
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("communityId", community.getCommunityId());
+                    map.put("bId", community.getbId());
+                    map.put("name", community.getName());
+                    map.put("address", community.getAddress());
+                    map.put("nearbyLandmarks", community.getNearbyLandmarks());
+                    map.put("cityCode", community.getCityCode());
+                    map.put("mapX", community.getMapX());
+                    map.put("mapY", community.getMapY());
+                    map.put("createTime", community.getCreateTime() != null ? community.getCreateTime().toString() : "-");
+                    map.put("statusCd", community.getStatusCd());
+                    map.put("state", community.getState());
+                    map.put("communityArea", community.getCommunityArea());
+                    map.put("tel", community.getTel());
+                    map.put("payFeeMonth", community.getPayFeeMonth());
+                    map.put("feePrice", community.getFeePrice());
+                    map.put("qrCode", community.getQrCode());
+                    listMap.add(map);
+                }
+            }
+            
+            response.put("success", true);
+            response.put("data", listMap);
+        } catch (Exception e) {
+            logger.error("搜索小区失败: {}", e.getMessage());
+            response.put("success", false);
+            response.put("message", e.getMessage());
+        }
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/communities/{id}")
     public ResponseEntity<Map<String, Object>> getCommunityById(@PathVariable String id) {
-        Community community = communityService.findById(id);
-        if (community != null) {
-            Map<String, Object> map = new HashMap<>();
-            map.put("communityId", community.getCommunityId());
-            map.put("bId", community.getbId());
-            map.put("name", community.getName());
-            map.put("address", community.getAddress());
-            map.put("nearbyLandmarks", community.getNearbyLandmarks());
-            map.put("cityCode", community.getCityCode());
-            map.put("mapX", community.getMapX());
-            map.put("mapY", community.getMapY());
-            map.put("createTime", community.getCreateTime() != null ? community.getCreateTime().toString() : "-");
-            map.put("statusCd", community.getStatusCd());
-            map.put("state", community.getState());
-            map.put("communityArea", community.getCommunityArea());
-            map.put("tel", community.getTel());
-            map.put("payFeeMonth", community.getPayFeeMonth());
-            map.put("feePrice", community.getFeePrice());
-            map.put("qrCode", community.getQrCode());
-            return ResponseEntity.ok(map);
-        } else {
-            Map<String, Object> response = new HashMap<>();
+        Map<String, Object> response = new HashMap<>();
+        try {
+            Community community = communityService.findById(id);
+            if (community != null) {
+                Map<String, Object> map = new HashMap<>();
+                map.put("communityId", community.getCommunityId());
+                map.put("bId", community.getbId());
+                map.put("name", community.getName());
+                map.put("address", community.getAddress());
+                map.put("nearbyLandmarks", community.getNearbyLandmarks());
+                map.put("cityCode", community.getCityCode());
+                map.put("mapX", community.getMapX());
+                map.put("mapY", community.getMapY());
+                map.put("createTime", community.getCreateTime() != null ? community.getCreateTime().toString() : "-");
+                map.put("statusCd", community.getStatusCd());
+                map.put("state", community.getState());
+                map.put("communityArea", community.getCommunityArea());
+                map.put("tel", community.getTel());
+                map.put("payFeeMonth", community.getPayFeeMonth());
+                map.put("feePrice", community.getFeePrice());
+                map.put("qrCode", community.getQrCode());
+                response.put("success", true);
+                response.put("data", map);
+            } else {
+                response.put("success", false);
+                response.put("message", "小区不存在");
+            }
+        } catch (Exception e) {
+            logger.error("获取小区详情失败: {}", e.getMessage());
             response.put("success", false);
-            response.put("message", "小区不存在");
-            return ResponseEntity.ok(response);
+            response.put("message", e.getMessage());
         }
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/communities")
-    public ResponseEntity<?> createCommunity(@RequestBody Map<String, Object> request) {
+    public ResponseEntity<Map<String, Object>> createCommunity(@RequestBody Map<String, Object> request) {
+        Map<String, Object> response = new HashMap<>();
         try {
             Community community = new Community();
             community.setName((String) request.get("name"));
@@ -120,22 +187,20 @@ public class CommunityController {
             
             communityService.create(community);
             
-            Map<String, Object> response = new HashMap<>();
             response.put("success", true);
             response.put("message", "小区创建成功");
             response.put("communityId", community.getCommunityId());
-            return ResponseEntity.ok(response);
         } catch (Exception e) {
             logger.error("创建小区失败: {}", e.getMessage());
-            Map<String, Object> response = new HashMap<>();
             response.put("success", false);
             response.put("message", e.getMessage());
-            return ResponseEntity.ok(response);
         }
+        return ResponseEntity.ok(response);
     }
 
     @PutMapping("/communities/{id}")
-    public ResponseEntity<?> updateCommunity(@PathVariable String id, @RequestBody Map<String, Object> request) {
+    public ResponseEntity<Map<String, Object>> updateCommunity(@PathVariable String id, @RequestBody Map<String, Object> request) {
+        Map<String, Object> response = new HashMap<>();
         try {
             Community community = new Community();
             community.setName((String) request.get("name"));
@@ -162,7 +227,6 @@ public class CommunityController {
             
             Community updated = communityService.update(id, community);
             
-            Map<String, Object> response = new HashMap<>();
             if (updated != null) {
                 response.put("success", true);
                 response.put("message", "小区更新成功");
@@ -170,30 +234,26 @@ public class CommunityController {
                 response.put("success", false);
                 response.put("message", "小区不存在");
             }
-            return ResponseEntity.ok(response);
         } catch (Exception e) {
             logger.error("更新小区失败: {}", e.getMessage());
-            Map<String, Object> response = new HashMap<>();
             response.put("success", false);
             response.put("message", e.getMessage());
-            return ResponseEntity.ok(response);
         }
+        return ResponseEntity.ok(response);
     }
 
     @DeleteMapping("/communities/{id}")
-    public ResponseEntity<?> deleteCommunity(@PathVariable String id) {
+    public ResponseEntity<Map<String, Object>> deleteCommunity(@PathVariable String id) {
+        Map<String, Object> response = new HashMap<>();
         try {
             communityService.delete(id);
-            Map<String, Object> response = new HashMap<>();
             response.put("success", true);
             response.put("message", "小区删除成功");
-            return ResponseEntity.ok(response);
         } catch (Exception e) {
             logger.error("删除小区失败: {}", e.getMessage());
-            Map<String, Object> response = new HashMap<>();
             response.put("success", false);
             response.put("message", e.getMessage());
-            return ResponseEntity.ok(response);
         }
+        return ResponseEntity.ok(response);
     }
 }
