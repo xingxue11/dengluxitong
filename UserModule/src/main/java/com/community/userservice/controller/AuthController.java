@@ -552,6 +552,16 @@ public class AuthController {
                         .orElse(null);
                 if (currentUser != null) {
                     response.put("userid", currentUser.getRowguid());
+                    
+                    List<Role> roles = userRolePermService.getRolesByUserGuid(currentUser.getRowguid());
+                    List<String> roleIds = new ArrayList<>();
+                    List<String> roleNames = new ArrayList<>();
+                    for (Role role : roles) {
+                        roleIds.add(role.getRowguid());
+                        roleNames.add(role.getRolename());
+                    }
+                    response.put("roleIds", roleIds);
+                    response.put("roleNames", roleNames);
                 }
                 
                 return ResponseEntity.ok(response);
@@ -596,7 +606,7 @@ public class AuthController {
     }
 
     @GetMapping("/roles")
-    public ResponseEntity<List<Map<String, Object>>> getAllRoles() {
+    public ResponseEntity<Map<String, Object>> getAllRoles() {
         List<Role> roles = roleService.findAll();
         List<Map<String, Object>> listMap = new ArrayList<>();
         DateTimeFormatter sdf = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
@@ -608,7 +618,11 @@ public class AuthController {
             map.put("addtime", role.getAddtime() != null ? role.getAddtime().format(sdf) : "-");
             listMap.add(map);
         }
-        return ResponseEntity.ok(listMap);
+        
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("data", listMap);
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/roles")
