@@ -21,9 +21,11 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.community.communityservice.entity.CarApply;
+import com.community.communityservice.entity.FlowEdge;
 import com.community.communityservice.entity.FlowInfo;
 import com.community.communityservice.entity.FlowInstance;
 import com.community.communityservice.entity.FlowNode;
+import com.community.communityservice.mapper.FlowEdgeMapper;
 import com.community.communityservice.mapper.FlowInfoMapper;
 import com.community.communityservice.mapper.FlowNodeMapper;
 import com.community.communityservice.service.CarApplyService;
@@ -41,6 +43,7 @@ public class CarApplyController {
     private final FlowTaskService flowTaskService;
     private final FlowInfoMapper flowInfoMapper;
     private final FlowNodeMapper flowNodeMapper;
+    private final FlowEdgeMapper flowEdgeMapper;
     private final ObjectMapper objectMapper;
 
     @Autowired
@@ -49,12 +52,14 @@ public class CarApplyController {
                               FlowTaskService flowTaskService,
                               FlowInfoMapper flowInfoMapper,
                               FlowNodeMapper flowNodeMapper,
+                              FlowEdgeMapper flowEdgeMapper,
                               ObjectMapper objectMapper) {
         this.carApplyService = carApplyService;
         this.flowInstanceService = flowInstanceService;
         this.flowTaskService = flowTaskService;
         this.flowInfoMapper = flowInfoMapper;
         this.flowNodeMapper = flowNodeMapper;
+        this.flowEdgeMapper = flowEdgeMapper;
         this.objectMapper = objectMapper;
     }
 
@@ -159,6 +164,160 @@ public class CarApplyController {
         return map;
     }
 
+    @PostMapping("/my-applies/approve")
+    public ResponseEntity<Map<String, Object>> approveTask(@RequestBody Map<String, Object> request) {
+        Map<String, Object> response = new HashMap<>();
+        
+        
+        logger.info("当前用户传入参数：{}",request);
+        
+        try {
+            String taskguid = (String) request.get("taskguid");
+            String instanceguid = (String) request.get("instanceguid");
+            String action = (String) request.get("action");
+            String comment = (String) request.get("comment");
+            String finishuser = (String) request.get("finishuser");
+
+            if (taskguid == null || instanceguid == null || action == null) {
+                response.put("success", false);
+                response.put("message", "参数不完整");
+                return ResponseEntity.ok(response);
+            }
+
+            com.community.communityservice.entity.FlowTask task = flowTaskService.findById(taskguid);
+            if (task == null || !"pending".equals(task.getStatus())) {
+                response.put("success", false);
+                response.put("message", "任务不存在或已处理");
+                return ResponseEntity.ok(response);
+            }
+
+            task.setStatus("completed");
+            task.setComment(comment);
+            task.setFinishuser(finishuser);
+            task.setFinishtime(java.time.LocalDateTime.now());
+            flowTaskService.update(task);
+
+            FlowInstance instance = flowInstanceService.findById(instanceguid);
+            if (instance == null) {
+                response.put("success", false);
+                response.put("message", "流程实例不存在");
+                return ResponseEntity.ok(response);
+            }
+
+            
+            //如果驳回整个流程直接结束
+            if ("reject".equals(action)) {
+                instance.setStatus("completed");
+                instance.setEndtime(java.time.LocalDateTime.now());
+                flowInstanceService.update(instance);
+                response.put("success", true);
+                response.put("message", "已驳回");
+                return ResponseEntity.ok(response);
+            }
+
+            String currentNodeId = task.getNodeid();
+
+            List<FlowEdge> edges = flowEdgeMapper.selectNextEdges(instance.getFlowguid(), currentNodeId);
+            
+            //当前节点后面没有边，整个流程结束
+            if (edges.isEmpty()) {
+                instance.setStatus("completed");
+                instance.setEndtime(java.time.LocalDateTime.now());
+                flowInstanceService.update(instance);
+                response.put("success", true);
+                response.put("message", "审批完成，流程结束");
+                return ResponseEntity.ok(response);
+            }
+            
+            
+            //存在连线的情况
+
+            for (FlowEdge edge : edges) {
+                String targetNodeId = edge.getTargetnode();
+                List<FlowNode> nodes = flowNodeMapper.selectByFlowGuid(instance.getFlowguid());
+                
+                
+                
+                for (FlowNode node : nodes) {
+                	
+                	
+                	
+                    if (targetNodeId.equals(node.getRowguid())) {
+                        if ("approval".equals(node.getNodetype())) {
+                            flowTaskService.createTask(
+                                instanceguid,
+                                node.getRowguid(),
+                                node.getNodelabel(),
+                                node.getNodetype(),
+                                node.getAssignee(),
+                                node.getRoleguid(),
+                                finishuser
+                            );
+                            instance.setCurrentnode(node.getNodelabel());
+                        } else if ("condition".equals(node.getNodetype())) {
+                            String conditionExpr = node.getConditionexpr();
+                            List<FlowEdge> conditionEdges = flowEdgeMapper.selectNextEdges(instance.getFlowguid(), node.getRowguid());
+                            
+                            String nextTargetNodeId = null;
+                            for (FlowEdge condEdge : conditionEdges) {
+                                String condEdgeLabel = condEdge.getLabel();
+                                if ("通过".equals(condEdgeLabel) || "yes".equals(condEdgeLabel) || "true".equals(condEdgeLabel)) {
+                                    if ("approve".equals(action)) {
+                                        nextTargetNodeId = condEdge.getTargetnode();
+                                    }
+                                } else if ("驳回".equals(condEdgeLabel) || "no".equals(condEdgeLabel) || "false".equals(condEdgeLabel)) {
+                                    if ("reject".equals(action)) {
+                                        nextTargetNodeId = condEdge.getTargetnode();
+                                    }
+                                } else {
+                                    if ("approve".equals(action)) {
+                                        nextTargetNodeId = condEdge.getTargetnode();
+                                    }
+                                }
+                            }
+                            
+                            if (nextTargetNodeId != null) {
+                                for (FlowNode nextNode : nodes) {
+                                    if (nextTargetNodeId.equals(nextNode.getRowguid())) {
+                                        if ("approval".equals(nextNode.getNodetype())) {
+                                            flowTaskService.createTask(
+                                                instanceguid,
+                                                nextNode.getRowguid(),
+                                                nextNode.getNodelabel(),
+                                                nextNode.getNodetype(),
+                                                nextNode.getAssignee(),
+                                                nextNode.getRoleguid(),
+                                                finishuser
+                                            );
+                                            instance.setCurrentnode(nextNode.getNodelabel());
+                                        } else if ("end".equals(nextNode.getNodetype())) {
+                                            instance.setStatus("completed");
+                                            instance.setEndtime(java.time.LocalDateTime.now());
+                                        }
+                                        break;
+                                    }
+                                }
+                            }
+                        } else if ("end".equals(node.getNodetype())) {
+                            instance.setStatus("completed");
+                            instance.setEndtime(java.time.LocalDateTime.now());
+                        }
+                        break;
+                    }
+                }
+            }
+
+            flowInstanceService.update(instance);
+            response.put("success", true);
+            response.put("message", "审批通过，已流转到下一环节");
+        } catch (Exception e) {
+            logger.error("审批失败: {}", e.getMessage());
+            response.put("success", false);
+            response.put("message", e.getMessage());
+        }
+        return ResponseEntity.ok(response);
+    }
+
     @GetMapping("/list/{userguid}")
     public ResponseEntity<Map<String, Object>> getCarAppliesByUser(@PathVariable String userguid) {
         Map<String, Object> response = new HashMap<>();
@@ -261,6 +420,7 @@ public class CarApplyController {
                     if ("approval".equals(node.getNodetype())) {
                         flowTaskService.createTask(
                             instance.getRowguid(),
+                            node.getRowguid(),
                             node.getNodelabel(),
                             node.getNodetype(),
                             node.getAssignee(),

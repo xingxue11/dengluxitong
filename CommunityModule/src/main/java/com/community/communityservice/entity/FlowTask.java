@@ -21,6 +21,9 @@ public class FlowTask {
 
     @TableField("nodetype")
     private String nodetype;
+    
+    @TableField("nodeid")
+    private String nodeid;
 
     @TableField("assignee")
     private String assignee;
@@ -49,7 +52,15 @@ public class FlowTask {
     public FlowTask() {
     }
 
-    public String getRowguid() {
+    public String getNodeid() {
+		return nodeid;
+	}
+
+	public void setNodeid(String nodeid) {
+		this.nodeid = nodeid;
+	}
+
+	public String getRowguid() {
         return rowguid;
     }
 

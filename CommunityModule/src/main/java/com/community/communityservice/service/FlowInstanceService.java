@@ -15,4 +15,6 @@ public interface FlowInstanceService {
     List<FlowInstance> findByFlowguid(String flowguid);
 
     void updateStatus(String instanceguid, String status, String currentnode);
+
+    void update(FlowInstance instance);
 }

@@ -64,4 +64,9 @@ public class FlowInstanceServiceImpl implements FlowInstanceService {
             flowInstanceMapper.updateById(instance);
         }
     }
+
+    @Override
+    public void update(FlowInstance instance) {
+        flowInstanceMapper.updateById(instance);
+    }
 }

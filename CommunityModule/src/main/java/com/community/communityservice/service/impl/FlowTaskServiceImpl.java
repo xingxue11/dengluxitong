@@ -20,11 +20,12 @@ public class FlowTaskServiceImpl implements FlowTaskService {
     }
 
     @Override
-    public FlowTask createTask(String instanceguid, String nodelabel, String nodetype, String assignee, String roleguid, String createuser) {
+    public FlowTask createTask(String instanceguid, String nodeid,String nodelabel, String nodetype, String assignee, String roleguid, String createuser) {
         FlowTask task = new FlowTask();
         task.setRowguid(UUID.randomUUID().toString().replace("-", "").substring(0, 30));
         task.setInstanceguid(instanceguid);
         task.setNodelabel(nodelabel);
+        task.setNodeid(nodeid);
         task.setNodetype(nodetype);
         task.setAssignee(assignee);
         task.setRoleguid(roleguid);
@@ -76,5 +77,10 @@ public class FlowTaskServiceImpl implements FlowTaskService {
             task.setStatus(status);
             flowTaskMapper.updateById(task);
         }
+    }
+
+    @Override
+    public void update(FlowTask task) {
+        flowTaskMapper.updateById(task);
     }
 }

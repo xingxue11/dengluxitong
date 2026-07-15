@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS `abs_flowtask` (
   `instanceguid` varchar(50) DEFAULT NULL COMMENT '实例ID',
   `nodelabel` varchar(100) DEFAULT NULL COMMENT '节点标签',
   `nodetype` varchar(20) DEFAULT NULL COMMENT '节点类型',
+  `nodeid` varchar(50) DEFAULT NULL COMMENT '节点ID',
   `assignee` varchar(50) DEFAULT NULL COMMENT '处理人',
   `roleguid` varchar(50) DEFAULT NULL COMMENT '处理角色',
   `status` varchar(20) DEFAULT NULL COMMENT '状态：pending/completed',
@@ -25,6 +26,8 @@ CREATE TABLE IF NOT EXISTS `abs_flowtask` (
   `finishtime` datetime DEFAULT NULL COMMENT '完成时间',
   PRIMARY KEY (`rowguid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='流程任务表';
+
+ALTER TABLE `abs_flowtask` ADD COLUMN IF NOT EXISTS `nodeid` varchar(50) DEFAULT NULL COMMENT '节点ID' AFTER `nodetype`;
 
 INSERT INTO `abs_flowinfo` (`rowguid`, `groupname`, `grouptype`, `flowname`, `userguid`, `description`, `status`, `startrole`, `startname`, `flowtype`, `typename`, `addtime`) 
 VALUES ('car_apply_flow', '车位申请流程', 'flow', '车位申请流程', '1', '车位申请审批流程', '1', '1', '业主', 'carapply', '车位申请', NOW());
