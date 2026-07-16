@@ -86,4 +86,12 @@ public class CarApplyServiceImpl implements CarApplyService {
         queryWrapper.orderByDesc(CarApply::getCreatetime);
         return carApplyMapper.selectList(queryWrapper);
     }
+
+    @Override
+    public List<CarApply> findByUsername(String username) {
+        LambdaQueryWrapper<CarApply> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(CarApply::getUsername, username);
+        queryWrapper.orderByDesc(CarApply::getCreatetime);
+        return carApplyMapper.selectList(queryWrapper);
+    }
 }

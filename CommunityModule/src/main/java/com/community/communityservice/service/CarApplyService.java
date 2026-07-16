@@ -17,4 +17,6 @@ public interface CarApplyService {
     void delete(String id);
 
     List<CarApply> findByUserguid(String userguid);
+    
+    List<CarApply> findByUsername(String username);
 }

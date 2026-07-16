@@ -5,7 +5,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.community.userservice.entity.User;
+import com.community.userservice.service.UserService;
+import com.community.userservice.util.JwtUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,7 +23,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-
 import com.community.communityservice.entity.CarApply;
 import com.community.communityservice.entity.FlowEdge;
 import com.community.communityservice.entity.FlowInfo;
@@ -45,6 +48,8 @@ public class CarApplyController {
     private final FlowNodeMapper flowNodeMapper;
     private final FlowEdgeMapper flowEdgeMapper;
     private final ObjectMapper objectMapper;
+    private final JwtUtil jwtUtil;
+    private final UserService userService;
 
     @Autowired
     public CarApplyController(CarApplyService carApplyService, 
@@ -53,7 +58,9 @@ public class CarApplyController {
                               FlowInfoMapper flowInfoMapper,
                               FlowNodeMapper flowNodeMapper,
                               FlowEdgeMapper flowEdgeMapper,
-                              ObjectMapper objectMapper) {
+                              ObjectMapper objectMapper,
+                              JwtUtil jwtUtil,
+                              UserService userService) {
         this.carApplyService = carApplyService;
         this.flowInstanceService = flowInstanceService;
         this.flowTaskService = flowTaskService;
@@ -61,6 +68,8 @@ public class CarApplyController {
         this.flowNodeMapper = flowNodeMapper;
         this.flowEdgeMapper = flowEdgeMapper;
         this.objectMapper = objectMapper;
+        this.jwtUtil = jwtUtil;
+        this.userService = userService;
     }
 
     @GetMapping("/list")
@@ -89,6 +98,78 @@ public class CarApplyController {
             response.put("data", listMap);
         } catch (Exception e) {
             logger.error("获取车位申请列表失败: {}", e.getMessage());
+            response.put("success", false);
+            response.put("message", e.getMessage());
+        }
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/my-carapply")
+    public ResponseEntity<Map<String, Object>> getMyCarApply(HttpServletRequest httpRequest) {
+        Map<String, Object> response = new HashMap<>();
+        try {
+            String authorizationHeader = httpRequest.getHeader("Authorization");
+            if (authorizationHeader == null) {
+                response.put("success", false);
+                response.put("message", "请先登录");
+                return ResponseEntity.ok(response);
+            }
+            
+            String username = jwtUtil.extractUsername(authorizationHeader);
+            
+            List<User> users = userService.findAll();
+            User currentUser = users.stream()
+                    .filter(u -> username.equals(u.getUsername()))
+                    .findFirst()
+                    .orElse(null);
+            
+            if (currentUser == null) {
+                response.put("success", false);
+                response.put("message", "用户不存在");
+                return ResponseEntity.ok(response);
+            }
+            
+            String userguid = currentUser.getRowguid();
+            List<CarApply> carApplies = carApplyService.findByUserguid(userguid);
+            
+            List<Map<String, Object>> listMap = new ArrayList<>();
+            for (CarApply carApply : carApplies) {
+                Map<String, Object> map = new HashMap<>();
+                map.put("rowguid", carApply.getRowguid());
+                map.put("userguid", carApply.getUserguid());
+                map.put("username", carApply.getUsername());
+                map.put("startdate", carApply.getStartdate());
+                map.put("enddate", carApply.getEnddate());
+                map.put("carnum", carApply.getCarnum());
+                map.put("cartype", carApply.getCartype());
+                map.put("phone", carApply.getPhone());
+                map.put("idcard", carApply.getIdcard());
+                map.put("createtime", carApply.getCreatetime());
+                
+                List<FlowInstance> instances = flowInstanceService.findByApplyguid(carApply.getRowguid());
+                if (!instances.isEmpty()) {
+                    FlowInstance instance = instances.get(0);
+                    map.put("status", instance.getStatus());
+                    map.put("currentnode", instance.getCurrentnode());
+                    
+                    List<com.community.communityservice.entity.FlowTask> tasks = flowTaskService.findByInstanceguid(instance.getRowguid());
+                    for (com.community.communityservice.entity.FlowTask task : tasks) {
+                        if ("pending".equals(task.getStatus())) {
+                            map.put("taskNodelabel", task.getNodelabel());
+                            break;
+                        }
+                    }
+                } else {
+                    map.put("status", "pending");
+                }
+                
+                listMap.add(map);
+            }
+            
+            response.put("success", true);
+            response.put("data", listMap);
+        } catch (Exception e) {
+            logger.error("获取我的车位申请失败: {}", e.getMessage());
             response.put("success", false);
             response.put("message", e.getMessage());
         }
@@ -382,12 +463,35 @@ public class CarApplyController {
     }
 
     @PostMapping("/apply")
-    public ResponseEntity<Map<String, Object>> createCarApply(@RequestBody Map<String, Object> request) {
+    public ResponseEntity<Map<String, Object>> createCarApply(@RequestBody Map<String, Object> request, HttpServletRequest httpRequest) {
         Map<String, Object> response = new HashMap<>();
         try {
+            String authorizationHeader = httpRequest.getHeader("Authorization");
+            if (authorizationHeader == null) {
+                response.put("success", false);
+                response.put("message", "请先登录");
+                return ResponseEntity.ok(response);
+            }
+            
+            String username = jwtUtil.extractUsername(authorizationHeader);
+            
+            List<User> users = userService.findAll();
+            User currentUser = users.stream()
+                    .filter(u -> username.equals(u.getUsername()))
+                    .findFirst()
+                    .orElse(null);
+            
+            if (currentUser == null) {
+                response.put("success", false);
+                response.put("message", "用户不存在");
+                return ResponseEntity.ok(response);
+            }
+            
+            String userguid = currentUser.getRowguid();
+            
             CarApply carApply = new CarApply();
-            carApply.setUserguid((String) request.get("userguid"));
-            carApply.setUsername((String) request.get("username"));
+            carApply.setUserguid(userguid);
+            carApply.setUsername(currentUser.getUsername());
             carApply.setStartdate(java.time.LocalDateTime.parse((String) request.get("startdate")));
             carApply.setEnddate(java.time.LocalDateTime.parse((String) request.get("enddate")));
             carApply.setCarnum((String) request.get("carnum"));
@@ -444,6 +548,13 @@ public class CarApplyController {
         }
         return ResponseEntity.ok(response);
     }
+    
+    
+    
+    
+    
+    
+    
 
     @PutMapping("/{id}")
     public ResponseEntity<Map<String, Object>> updateCarApply(@PathVariable String id, @RequestBody Map<String, Object> request) {
