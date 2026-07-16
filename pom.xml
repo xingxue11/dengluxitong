@@ -8,6 +8,7 @@
   	<module>UserModule</module>
   	<module>WebModule</module>
   	<module>CommunityModule</module>
+  	<module>WorkFlowModule</module>
   </modules>
   
   

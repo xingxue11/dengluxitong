@@ -13,6 +13,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.annotation.Order;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -24,19 +25,20 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import com.community.communityservice.entity.CarApply;
-import com.community.communityservice.entity.FlowEdge;
-import com.community.communityservice.entity.FlowInfo;
-import com.community.communityservice.entity.FlowInstance;
-import com.community.communityservice.entity.FlowNode;
-import com.community.communityservice.mapper.FlowEdgeMapper;
-import com.community.communityservice.mapper.FlowInfoMapper;
-import com.community.communityservice.mapper.FlowNodeMapper;
 import com.community.communityservice.service.CarApplyService;
-import com.community.communityservice.service.FlowInstanceService;
-import com.community.communityservice.service.FlowTaskService;
+import com.community.workflowservice.entity.FlowEdge;
+import com.community.workflowservice.entity.FlowInfo;
+import com.community.workflowservice.entity.FlowInstance;
+import com.community.workflowservice.entity.FlowNode;
+import com.community.workflowservice.mapper.FlowEdgeMapper;
+import com.community.workflowservice.mapper.FlowInfoMapper;
+import com.community.workflowservice.mapper.FlowNodeMapper;
+import com.community.workflowservice.service.FlowInstanceService;
+import com.community.workflowservice.service.FlowTaskService;
 
 @RestController
 @RequestMapping("/api/car-apply")
+@Order(9)
 public class CarApplyController {
 
     private static final Logger logger = LoggerFactory.getLogger(CarApplyController.class.getName());
@@ -152,8 +154,8 @@ public class CarApplyController {
                     map.put("status", instance.getStatus());
                     map.put("currentnode", instance.getCurrentnode());
                     
-                    List<com.community.communityservice.entity.FlowTask> tasks = flowTaskService.findByInstanceguid(instance.getRowguid());
-                    for (com.community.communityservice.entity.FlowTask task : tasks) {
+                    List<com.community.workflowservice.entity.FlowTask> tasks = flowTaskService.findByInstanceguid(instance.getRowguid());
+                    for (com.community.workflowservice.entity.FlowTask task : tasks) {
                         if ("pending".equals(task.getStatus())) {
                             map.put("taskNodelabel", task.getNodelabel());
                             break;
@@ -195,14 +197,14 @@ public class CarApplyController {
                         map.put("status", instance.getStatus());
                         map.put("currentnode", instance.getCurrentnode());
                         
-                        List<com.community.communityservice.entity.FlowTask> tasks = flowTaskService.findByInstanceguid(instance.getRowguid());
+                        List<com.community.workflowservice.entity.FlowTask> tasks = flowTaskService.findByInstanceguid(instance.getRowguid());
                         map.put("tasks", tasks);
                     }
                     resultList.add(map);
                 }
             } else if (roleguid != null && !roleguid.isEmpty()) {*/
-                List<com.community.communityservice.entity.FlowTask> tasks = flowTaskService.findByAssignee(roleguid);
-                for (com.community.communityservice.entity.FlowTask task : tasks) {
+                List<com.community.workflowservice.entity.FlowTask> tasks = flowTaskService.findByAssignee(roleguid);
+                for (com.community.workflowservice.entity.FlowTask task : tasks) {
                     FlowInstance instance = flowInstanceService.findById(task.getInstanceguid());
                     if (instance != null) {
                         CarApply carApply = carApplyService.findById(instance.getApplyguid());
@@ -265,7 +267,7 @@ public class CarApplyController {
                 return ResponseEntity.ok(response);
             }
 
-            com.community.communityservice.entity.FlowTask task = flowTaskService.findById(taskguid);
+            com.community.workflowservice.entity.FlowTask task = flowTaskService.findById(taskguid);
             if (task == null || !"pending".equals(task.getStatus())) {
                 response.put("success", false);
                 response.put("message", "任务不存在或已处理");
@@ -467,13 +469,14 @@ public class CarApplyController {
         Map<String, Object> response = new HashMap<>();
         try {
             String authorizationHeader = httpRequest.getHeader("Authorization");
-            if (authorizationHeader == null) {
+            if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
                 response.put("success", false);
                 response.put("message", "请先登录");
                 return ResponseEntity.ok(response);
             }
             
-            String username = jwtUtil.extractUsername(authorizationHeader);
+            String token = authorizationHeader.substring(7);
+            String username = jwtUtil.extractUsername(token);
             
             List<User> users = userService.findAll();
             User currentUser = users.stream()
