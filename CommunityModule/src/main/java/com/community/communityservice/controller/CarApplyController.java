@@ -5,11 +5,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.community.userservice.entity.User;
-import com.community.userservice.service.UserService;
-import com.community.userservice.util.JwtUtil;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,8 +19,12 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
 import com.community.communityservice.entity.CarApply;
 import com.community.communityservice.service.CarApplyService;
+import com.community.userservice.entity.User;
+import com.community.userservice.service.UserService;
+import com.community.userservice.util.JwtUtil;
 import com.community.workflowservice.entity.FlowEdge;
 import com.community.workflowservice.entity.FlowInfo;
 import com.community.workflowservice.entity.FlowInstance;
@@ -35,6 +34,9 @@ import com.community.workflowservice.mapper.FlowInfoMapper;
 import com.community.workflowservice.mapper.FlowNodeMapper;
 import com.community.workflowservice.service.FlowInstanceService;
 import com.community.workflowservice.service.FlowTaskService;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import jakarta.servlet.http.HttpServletRequest;
 
 @RestController
 @RequestMapping("/api/car-apply")
