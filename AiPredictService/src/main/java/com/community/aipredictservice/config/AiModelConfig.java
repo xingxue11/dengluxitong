@@ -6,6 +6,7 @@ import java.util.Map;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.openai.OpenAiChatModel;
 import org.springframework.ai.openai.api.OpenAiApi;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -85,10 +86,10 @@ public class AiModelConfig {
 
     @Bean
     public Map<ModelType, ChatClient> chatClientMap(
-            ChatClient kimiChatClient,
-            ChatClient doubaoChatClient,
-            ChatClient qianwenChatClient,
-            ChatClient zhipuChatClient) {
+            @Qualifier("kimiChatClient") ChatClient kimiChatClient,
+            @Qualifier("doubaoChatClient") ChatClient doubaoChatClient,
+            @Qualifier("qianwenChatClient") ChatClient qianwenChatClient,
+            @Qualifier("zhipuChatClient") ChatClient zhipuChatClient) {
 
         Map<ModelType, ChatClient> map = new EnumMap<>(ModelType.class);
         if (kimiChatClient != null) {
