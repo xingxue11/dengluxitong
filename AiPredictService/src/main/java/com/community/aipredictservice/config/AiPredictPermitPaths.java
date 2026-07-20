@@ -13,7 +13,8 @@ public class AiPredictPermitPaths implements PermitAllPathsProvider {
     @Override
     public List<String> getPermitAllPaths() {
         return Arrays.asList(
-                "/api/debate/**"
+                "/api/debate/**",
+                "/ws/debate"
         );
     }
 }

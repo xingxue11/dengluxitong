@@ -38,6 +38,9 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         List<String> allPermitPaths = new ArrayList<>();
         allPermitPaths.add("/api/auth/**");
+        allPermitPaths.add("/api/vcode/**");
+        allPermitPaths.add("/api/debate/**");
+        allPermitPaths.add("/ws/debate");
         
         if (permitAllPathsProviders != null) {
             for (PermitAllPathsProvider provider : permitAllPathsProviders) {
@@ -78,6 +81,7 @@ public class SecurityConfig {
         configuration.setAllowedOriginPatterns(Arrays.asList("*"));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
+        configuration.setExposedHeaders(Arrays.asList("X-VCode-Id"));
         configuration.setAllowCredentials(true);
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);

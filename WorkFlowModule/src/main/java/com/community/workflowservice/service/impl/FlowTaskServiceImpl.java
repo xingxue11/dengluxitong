@@ -1,16 +1,19 @@
 package com.community.workflowservice.service.impl;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.community.workflowservice.entity.FlowTask;
-import com.community.workflowservice.mapper.FlowTaskMapper;
-import com.community.workflowservice.service.FlowTaskService;
-import org.springframework.stereotype.Service;
-
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.core.annotation.Order;
+import org.springframework.stereotype.Service;
+
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.community.workflowservice.entity.FlowTask;
+import com.community.workflowservice.mapper.FlowTaskMapper;
+import com.community.workflowservice.service.FlowTaskService;
+
 @Service
+@Order(100)
 public class FlowTaskServiceImpl implements FlowTaskService {
 
     private final FlowTaskMapper flowTaskMapper;

@@ -96,17 +96,52 @@ public class AuthController {
        System.out.println("****************************************&&&&&&&&&&&&&&&&&&&&&&&&&&");
        
        
-       
+        
         try {
             String username = credentials.get("username");
             String password = credentials.get("password");
+            String vcode = credentials.get("vcode");
+            String vcodeId = credentials.get("vcodeId");
             logger.info("收到用户登录请求: username={}, password=******", username);
+
+            if (vcode == null || vcode.trim().isEmpty()) {
+                Map<String, Object> response = new HashMap<>();
+                response.put("success", false);
+                response.put("message", "请输入验证码");
+                return ResponseEntity.badRequest().body(response);
+            }
+            
+            if (vcodeId == null || vcodeId.trim().isEmpty()) {
+                Map<String, Object> response = new HashMap<>();
+                response.put("success", false);
+                response.put("message", "验证码ID无效");
+                return ResponseEntity.badRequest().body(response);
+            }
+            
+            String redisKey = "vcode:" + vcodeId;
+            String storedCode = (String) redisTemplate.opsForValue().get(redisKey);
+            
+            if (storedCode == null) {
+                Map<String, Object> response = new HashMap<>();
+                response.put("success", false);
+                response.put("message", "验证码已过期，请刷新");
+                return ResponseEntity.ok(response);
+            }
+            
+            if (!storedCode.equals(vcode.toLowerCase())) {
+                Map<String, Object> response = new HashMap<>();
+                response.put("success", false);
+                response.put("message", "验证码错误");
+                return ResponseEntity.ok(response);
+            }
+            
+            redisTemplate.delete(redisKey);
 
             String token = userService.login(username, password);
             
-            String redisKey = "token:" + username;
-            redisTemplate.opsForValue().set(redisKey, token, 86400, TimeUnit.SECONDS);
-            logger.info("Token已存入Redis: key={}, value={}", redisKey, token);
+            String tokenRedisKey = "token:" + username;
+            redisTemplate.opsForValue().set(tokenRedisKey, token, 86400, TimeUnit.SECONDS);
+            logger.info("Token已存入Redis: key={}, value={}", tokenRedisKey, token);
 
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);

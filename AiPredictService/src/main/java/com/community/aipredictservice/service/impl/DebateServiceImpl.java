@@ -10,16 +10,18 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.messages.UserMessage;
+import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.stereotype.Service;
 
 import com.community.aipredictservice.dto.DebateMessage;
 import com.community.aipredictservice.dto.DebateRequest;
 import com.community.aipredictservice.dto.DebateResponse;
+import com.community.aipredictservice.dto.WebSocketDebateMessage;
 import com.community.aipredictservice.enums.ModelType;
 import com.community.aipredictservice.service.DebateService;
+import com.community.aipredictservice.websocket.DebateWebSocketHandler;
 
 @Service
 public class DebateServiceImpl implements DebateService {
@@ -29,9 +31,17 @@ public class DebateServiceImpl implements DebateService {
     private static final Logger log = LoggerFactory.getLogger(DebateServiceImpl.class);
 
     private final Map<ModelType, ChatClient> chatClientMap;
+    private final Map<ModelType, String> modelBaseUrlMap;
+    private final DebateWebSocketHandler webSocketHandler;
 
-    public DebateServiceImpl(Map<ModelType, ChatClient> chatClientMap) {
+    public DebateServiceImpl(Map<ModelType, ChatClient> chatClientMap, Map<ModelType, String> modelBaseUrlMap, DebateWebSocketHandler webSocketHandler) {
         this.chatClientMap = chatClientMap;
+        this.modelBaseUrlMap = modelBaseUrlMap;
+        this.webSocketHandler = webSocketHandler;
+        log.info("DebateServiceImpl initialized, WebSocketHandler: {}", webSocketHandler != null ? "available" : "null");
+        if (webSocketHandler != null) {
+            log.info("Active WebSocket sessions: {}", webSocketHandler.getSessionCount());
+        }
     }
 
     @Override
@@ -43,6 +53,7 @@ public class DebateServiceImpl implements DebateService {
 
         List<ModelType> enabledModels = getEnabledModels(request);
         if (enabledModels.isEmpty()) {
+            broadcastMessage(WebSocketDebateMessage.error("No AI models enabled"));
             return DebateResponse.builder()
                     .success(false)
                     .message("No AI models enabled")
@@ -51,9 +62,12 @@ public class DebateServiceImpl implements DebateService {
 
         List<DebateMessage> allMessages = new ArrayList<>();
 
+        broadcastMessage(WebSocketDebateMessage.start(scenario, maxRounds));
+
         try {
             for (int round = 1; round <= maxRounds; round++) {
                 log.info("Round {} starts", round);
+                broadcastMessage(WebSocketDebateMessage.roundStart(round, maxRounds));
 
                 for (ModelType modelType : enabledModels) {
                     ChatClient chatClient = chatClientMap.get(modelType);
@@ -64,6 +78,8 @@ public class DebateServiceImpl implements DebateService {
 
                     try {
                         String prompt = buildDebatePrompt(scenario, allMessages, round, modelType);
+                        String baseUrl = modelBaseUrlMap.get(modelType);
+                        log.info("Model {} round {} calling API: {}", modelType.getName(), round, baseUrl);
 
                         ChatResponse response = chatClient.prompt(new Prompt(new UserMessage(prompt)))
                                 .call()
@@ -81,8 +97,9 @@ public class DebateServiceImpl implements DebateService {
                                 .build();
 
                         allMessages.add(message);
-                        log.info("Model {} round {} complete: {}", modelType.getName(), round,
-                                responseContent.length() > 100 ? responseContent.substring(0, 100) + "..." : responseContent);
+                        broadcastMessage(WebSocketDebateMessage.modelResponse(message, maxRounds));
+
+                        log.info("Model {} round {} complete: {}", modelType.getName(), round,responseContent.length() > 100 ? responseContent.substring(0, 100) + "..." : responseContent);
 
                     } catch (Exception e) {
                         log.error("Model {} round {} failed: {}", modelType.getName(), round, e.getMessage());
@@ -95,15 +112,19 @@ public class DebateServiceImpl implements DebateService {
                                 .timestamp(System.currentTimeMillis())
                                 .build();
                         allMessages.add(errorMessage);
+                        broadcastMessage(WebSocketDebateMessage.modelResponse(errorMessage, maxRounds));
                     }
                 }
 
                 log.info("Round {} ends", round);
+                broadcastMessage(WebSocketDebateMessage.roundEnd(round, maxRounds));
             }
 
             Map<String, String> report = generateReport(scenario, allMessages, maxRounds);
 
             long duration = System.currentTimeMillis() - startTime;
+
+            broadcastMessage(WebSocketDebateMessage.complete(report, maxRounds));
 
             return DebateResponse.builder()
                     .success(true)
@@ -117,6 +138,7 @@ public class DebateServiceImpl implements DebateService {
 
         } catch (Exception e) {
             log.error("Debate exception: {}", e.getMessage(), e);
+            broadcastMessage(WebSocketDebateMessage.error("Debate failed: " + e.getMessage()));
             return DebateResponse.builder()
                     .success(false)
                     .message("Debate failed: " + e.getMessage())
@@ -124,6 +146,12 @@ public class DebateServiceImpl implements DebateService {
                     .messages(allMessages)
                     .durationMs(System.currentTimeMillis() - startTime)
                     .build();
+        }
+    }
+
+    private void broadcastMessage(WebSocketDebateMessage message) {
+        if (webSocketHandler != null && webSocketHandler.hasActiveSessions()) {
+            webSocketHandler.broadcastMessage(message);
         }
     }
 

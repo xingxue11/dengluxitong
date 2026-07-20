@@ -15,11 +15,11 @@ public class DebateRequest {
 
     private Integer maxRounds = 4;
 
-    private Boolean kimiEnabled = true;
+    private Boolean kimiEnabled = false;
 
     private Boolean doubaoEnabled = true;
 
-    private Boolean qianwenEnabled = true;
+    private Boolean qianwenEnabled = false;
 
-    private Boolean zhipuEnabled = true;
+    private Boolean zhipuEnabled = false;
 }
