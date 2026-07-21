@@ -52,3 +52,7 @@ ai:
     base-url: https://ark.cn-beijing.volces.com/api/v3
     model: doubao-seed-evolving
     enabled: false
+  local:
+    base-url: http://localhost:11434
+    model: qwen2.5:7b
+    enabled: true

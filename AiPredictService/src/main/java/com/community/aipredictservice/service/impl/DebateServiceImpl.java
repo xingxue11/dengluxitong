@@ -72,7 +72,7 @@ public class DebateServiceImpl implements DebateService {
                 for (ModelType modelType : enabledModels) {
                     ChatClient chatClient = chatClientMap.get(modelType);
                     if (chatClient == null) {
-                        log.warn("Model {} not configured or disabled, skipping", modelType.getName());
+                        log.warn("模型 {} 未配置启动", modelType.getName());
                         continue;
                     }
 
@@ -168,6 +168,9 @@ public class DebateServiceImpl implements DebateService {
         }
         if (Boolean.TRUE.equals(request.getZhipuEnabled())) {
             models.add(ModelType.ZHIPU);
+        }
+        if (Boolean.TRUE.equals(request.getLocalEnabled())) {
+            models.add(ModelType.LOCAL);
         }
         return models;
     }

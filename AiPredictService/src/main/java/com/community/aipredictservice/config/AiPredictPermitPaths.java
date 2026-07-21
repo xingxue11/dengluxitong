@@ -14,6 +14,7 @@ public class AiPredictPermitPaths implements PermitAllPathsProvider {
     public List<String> getPermitAllPaths() {
         return Arrays.asList(
                 "/api/debate/**",
+                "/api/local-ai/**",
                 "/ws/debate"
         );
     }

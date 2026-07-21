@@ -22,4 +22,6 @@ public class DebateRequest {
     private Boolean qianwenEnabled = false;
 
     private Boolean zhipuEnabled = false;
+
+    private Boolean localEnabled = true;
 }

@@ -40,6 +40,7 @@ public class SecurityConfig {
         allPermitPaths.add("/api/auth/**");
         allPermitPaths.add("/api/vcode/**");
         allPermitPaths.add("/api/debate/**");
+        allPermitPaths.add("/api/local-ai/**");
         allPermitPaths.add("/ws/debate");
         
         if (permitAllPathsProviders != null) {
@@ -50,6 +51,13 @@ public class SecurityConfig {
                 }
             }
         }
+        
+        System.out.println("========================================");
+        System.out.println("Permit all paths count: " + allPermitPaths.size());
+        for (String path : allPermitPaths) {
+            System.out.println("  - " + path);
+        }
+        System.out.println("========================================");
 
         http
                 .csrf(AbstractHttpConfigurer::disable)

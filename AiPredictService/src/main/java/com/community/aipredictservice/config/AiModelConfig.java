@@ -11,8 +11,6 @@ import org.springframework.ai.retry.RetryUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.web.client.DefaultResponseErrorHandler;
-import org.springframework.web.client.ResponseErrorHandler;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.reactive.function.client.WebClient;
 
@@ -56,6 +54,15 @@ public class AiModelConfig {
     
     @Value("${ai.doubao.model:doubao-seed-1-6-thinking-250715}")
     private String doubaoModel;
+
+    @Value("${ai.local.base-url:http://localhost:11434}")
+    private String localBaseUrl;
+    
+    @Value("${ai.local.model:llama3}")
+    private String localModel;
+    
+    @Value("${ai.local.enabled:true}")
+    private boolean localEnabled;
 
     @Bean("kimiChatClient")
     public ChatClient kimiChatClient() {
@@ -121,14 +128,30 @@ public class AiModelConfig {
         }
         OpenAiApi api = new OpenAiApi(zhipuBaseUrl, zhipuApiKey, RestClient.builder(), WebClient.builder());
 
-        // 2. 创建 OpenAiChatModel，并设置默认选项（模型名称等）
         OpenAiChatModel chatModel = new OpenAiChatModel(api,
                 OpenAiChatOptions.builder()
-                        .withModel(qwenModel)
+                        .withModel(zhipuModel)
                         .build()
         );
 
-        // 3. 通过 ChatClient.Builder 构建 ChatClient
+        return ChatClient.builder(chatModel).build();
+    }
+
+    @Bean("localChatClient")
+    public ChatClient localChatClient() {
+        if (!localEnabled) {
+            return null;
+        }
+
+        
+        OpenAiApi api = new OpenAiApi(localBaseUrl, "ollama","/api/chat","/v1/embeddings", RestClient.builder(), WebClient.builder(),RetryUtils.DEFAULT_RESPONSE_ERROR_HANDLER);
+        OpenAiChatModel chatModel = new OpenAiChatModel(api,
+                OpenAiChatOptions.builder()
+                        .withModel(doubaoModel)
+                        .build()
+        );
+        
+
         return ChatClient.builder(chatModel).build();
     }
 
@@ -183,6 +206,15 @@ public class AiModelConfig {
             );
             map.put(ModelType.ZHIPU, ChatClient.builder(chatModel).build());
         }
+        if (localEnabled) {
+            OpenAiApi api = new OpenAiApi(localBaseUrl, "ollama", RestClient.builder(), WebClient.builder());
+            OpenAiChatModel chatModel = new OpenAiChatModel(api,
+                    OpenAiChatOptions.builder()
+                            .withModel(localModel)
+                            .build()
+            );
+            map.put(ModelType.LOCAL, ChatClient.builder(chatModel).build());
+        }
         
         return map;
     }
@@ -201,6 +233,9 @@ public class AiModelConfig {
         }
         if (zhipuApiKey != null && !zhipuApiKey.isEmpty()) {
             map.put(ModelType.ZHIPU, zhipuBaseUrl);
+        }
+        if (localEnabled) {
+            map.put(ModelType.LOCAL, localBaseUrl);
         }
         return map;
     }

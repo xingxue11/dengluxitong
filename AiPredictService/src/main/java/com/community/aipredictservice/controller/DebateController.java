@@ -1,8 +1,11 @@
 package com.community.aipredictservice.controller;
 
+import com.community.aipredictservice.dto.ChatRequest;
+import com.community.aipredictservice.dto.ChatResponse;
 import com.community.aipredictservice.dto.DebateRequest;
 import com.community.aipredictservice.dto.DebateResponse;
 import com.community.aipredictservice.service.DebateService;
+import com.community.aipredictservice.service.LocalAIService;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -17,9 +20,11 @@ import java.util.Map;
 public class DebateController {
 
     private final DebateService debateService;
+    private final LocalAIService localAIService;
 
-    public DebateController(DebateService debateService) {
+    public DebateController(DebateService debateService, LocalAIService localAIService) {
         this.debateService = debateService;
+        this.localAIService = localAIService;
     }
 
     @PostMapping("/start")
@@ -37,8 +42,16 @@ public class DebateController {
                 "kimi", Map.of("name", "Kimi", "description", "Moonshot AI", "enabled", true),
                 "doubao", Map.of("name", "豆包", "description", "字节跳动", "enabled", true),
                 "qianwen", Map.of("name", "通义千问", "description", "阿里巴巴", "enabled", true),
-                "zhipu", Map.of("name", "智谱AI", "description", "智谱科技", "enabled", true)
+                "zhipu", Map.of("name", "智谱AI", "description", "智谱科技", "enabled", true),
+                "local", Map.of("name", "本地模型", "description", "Ollama", "enabled", true)
         ));
         return ResponseEntity.ok(result);
+    }
+
+    @PostMapping("/chat")
+    public ResponseEntity<ChatResponse> chat(@Valid @RequestBody ChatRequest request) {
+        log.info("收到聊天请求，消息: {}", request.getMessage());
+        ChatResponse response = localAIService.chat(request);
+        return ResponseEntity.ok(response);
     }
 }
