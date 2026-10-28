@@ -18,7 +18,8 @@ public class CommServicePermitPaths implements PermitAllPathsProvider {
     public List<String> getPermitAllPaths() {
         return Arrays.asList(
                 "/api/community/**",
-                "/api/car-apply/**"
+                "/api/car-apply/**",
+                "/api/article/**"
         );
     }
 }
