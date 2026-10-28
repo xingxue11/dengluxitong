@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import com.community.aipredictservice.dto.ChatRequest;
 import com.community.aipredictservice.dto.ChatResponse;
 import com.community.aipredictservice.enums.ModelType;
+import com.community.aipredictservice.service.AgentService;
 import com.community.aipredictservice.service.LocalAIService;
 
 import lombok.extern.slf4j.Slf4j;
@@ -22,9 +23,11 @@ import lombok.extern.slf4j.Slf4j;
 public class LocalAIServiceImpl implements LocalAIService {
 
     private final Map<ModelType, ChatClient> chatClientMap;
+    private final AgentService agentService;
 
-    public LocalAIServiceImpl(Map<ModelType, ChatClient> chatClientMap) {
+    public LocalAIServiceImpl(Map<ModelType, ChatClient> chatClientMap, AgentService agentService) {
         this.chatClientMap = chatClientMap;
+        this.agentService = agentService;
     }
 
     @Override
@@ -32,6 +35,15 @@ public class LocalAIServiceImpl implements LocalAIService {
         long startTime = System.currentTimeMillis();
         
         try {
+            String message = request.getMessage();
+            
+            if (isWeatherQuery(message)) {
+                log.info("Detected weather query, using AgentService");
+                String response = agentService.chat(message);
+                long duration = System.currentTimeMillis() - startTime;
+                return ChatResponse.success(response, "本地模型(工具调用)", duration);
+            }
+
             ModelType modelType = getModelType(request.getModel());
             ChatClient chatClient = chatClientMap.get(modelType);
             
@@ -72,6 +84,19 @@ public class LocalAIServiceImpl implements LocalAIService {
             log.error("Local AI chat failed, duration: {}ms, error: {}", duration, e.getMessage(), e);
             return ChatResponse.error("对话失败: " + e.getMessage());
         }
+    }
+
+    private boolean isWeatherQuery(String message) {
+        if (message == null) {
+            return false;
+        }
+        String[] weatherKeywords = {"天气", "气温", "温度", "晴", "雨", "雪", "风", "阴"};
+        for (String keyword : weatherKeywords) {
+            if (message.contains(keyword)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private ModelType getModelType(String modelCode) {

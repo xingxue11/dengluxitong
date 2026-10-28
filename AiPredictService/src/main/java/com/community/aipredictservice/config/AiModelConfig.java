@@ -155,6 +155,23 @@ public class AiModelConfig {
         return ChatClient.builder(chatModel).build();
     }
 
+    @Bean("agentChatClient")
+    public ChatClient agentChatClient() {
+        if (!localEnabled) {
+            throw new IllegalStateException("Local AI is not enabled");
+        }
+
+        OpenAiApi api = new OpenAiApi(localBaseUrl, "ollama", "/api/chat", "/v1/embeddings", 
+                RestClient.builder(), WebClient.builder(), RetryUtils.DEFAULT_RESPONSE_ERROR_HANDLER);
+        OpenAiChatModel chatModel = new OpenAiChatModel(api,
+                OpenAiChatOptions.builder()
+                        .withModel(localModel)
+                        .build()
+        );
+
+        return ChatClient.builder(chatModel).build();
+    }
+
     @Bean
     public Map<ModelType, ChatClient> chatClientMap() {
         Map<ModelType, ChatClient> map = new EnumMap<>(ModelType.class);
